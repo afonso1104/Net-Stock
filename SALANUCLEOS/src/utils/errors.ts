@@ -7,5 +7,6 @@ export function friendlyError(error: unknown) {
   if (code.includes('network-request-failed') || !navigator.onLine) return 'Sem ligação à Internet. Verifica a ligação e tenta novamente.'
   if (code.includes('permission-denied')) return 'Não foi possível guardar a alteração. Confirma as permissões do projeto.'
   if (error instanceof Error && error.message.startsWith('APP:')) return error.message.slice(4)
-  return 'Não foi possível concluir a operação. Tenta novamente.'
+  console.error(error)
+  return `Não foi possível concluir a operação. Tenta novamente.${code ? ` (código: ${code})` : ''}`
 }
