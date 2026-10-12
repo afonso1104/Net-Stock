@@ -1,4 +1,5 @@
 import Add from '@mui/icons-material/Add'
+import Download from '@mui/icons-material/Download'
 import Search from '@mui/icons-material/Search'
 import { Button, InputAdornment, MenuItem, Stack, TextField, Typography } from '@mui/material'
 import { useMemo, useState } from 'react'
@@ -6,10 +7,12 @@ import { useSearchParams } from 'react-router-dom'
 import { MaterialDialog } from '../components/EntityDialogs'
 import { MaterialCard } from '../components/MaterialCard'
 import { useInventory } from '../features/inventory/InventoryContext'
+import { downloadCsv } from '../utils/csv'
+import { formatDate } from '../utils/dates'
 import { normalizeText } from '../utils/text'
 
 export function MaterialsPage() {
-  const { materials, boxes, stocks, stockFor, inUseFor } = useInventory()
+  const { materials, boxes, stocks, checkouts, stockFor, inUseFor } = useInventory()
   const [params] = useSearchParams()
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState(params.get('filter') || 'active')
@@ -28,9 +31,21 @@ export function MaterialsPage() {
     if (filter === 'available') return stockFor(material.id) > 0
     return true
   }).sort((a, b) => sort === 'quantity' ? stockFor(b.id) - stockFor(a.id) : sort === 'recent' ? (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0) : a.name.localeCompare(b.name, 'pt')), [boxId, category, filter, inUseFor, materials, search, sort, stockFor, stocks])
+  function exportCsv() {
+    const byName = [...materials].filter((material) => material.active).sort((a, b) => a.name.localeCompare(b.name, 'pt'))
+    const rows: (string | number | null)[][] = [['Material', 'Categoria', 'Unidade', 'Onde está', 'Código caixa', 'Localização / pessoa', 'Quantidade', 'Stock mínimo', 'Total disponível']]
+    for (const material of byName) {
+      const inBoxes = stocks.filter((stock) => stock.materialId === material.id && stock.quantity > 0)
+      const inUse = checkouts.filter((checkout) => checkout.materialId === material.id && checkout.status === 'open')
+      for (const stock of inBoxes) { const box = boxes.find((item) => item.id === stock.boxId); rows.push([material.name, material.category, material.unit, box?.name ?? '?', box?.code ?? '', box?.roomLocation ?? '', stock.quantity, material.minimumStock, stockFor(material.id)]) }
+      for (const checkout of inUse) rows.push([material.name, material.category, material.unit, 'Em uso', '', `${checkout.person} · desde ${formatDate(checkout.createdAt)}`, checkout.pendingQuantity, material.minimumStock, stockFor(material.id)])
+      if (!inBoxes.length && !inUse.length) rows.push([material.name, material.category, material.unit, 'Sem stock', '', '', 0, material.minimumStock, 0])
+    }
+    downloadCsv(`inventario-${new Date().toISOString().slice(0, 10)}.csv`, rows)
+  }
   const categories = [...new Set(materials.map((material) => material.category).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt'))
   return <Stack spacing={3} className="page-enter">
-    <Stack direction="row" justifyContent="space-between" alignItems="center"><div><Typography variant="h1">Materiais</Typography><Typography color="text.secondary">{visible.length} resultados</Typography></div><Button variant="contained" startIcon={<Add />} onClick={() => setDialog(true)}>Novo material</Button></Stack>
+    <Stack direction="row" justifyContent="space-between" alignItems="center"><div><Typography variant="h1">Materiais</Typography><Typography color="text.secondary">{visible.length} resultados</Typography></div><Stack direction={{ xs: 'column', sm: 'row' }} gap={1}><Button variant="contained" startIcon={<Add />} onClick={() => setDialog(true)}>Novo material</Button><Button startIcon={<Download />} onClick={exportCsv}>Exportar</Button></Stack></Stack>
     <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5}>
       <TextField fullWidth placeholder="Pesquisar…" value={search} onChange={(e) => setSearch(e.target.value)} slotProps={{ input: { startAdornment: <InputAdornment position="start"><Search /></InputAdornment> } }} />
       <TextField select label="Mostrar" value={filter} onChange={(e) => setFilter(e.target.value)} sx={{ minWidth: 160 }}><MenuItem value="active">Ativos</MenuItem><MenuItem value="available">Disponíveis</MenuItem><MenuItem value="inuse">Em uso</MenuItem><MenuItem value="low">Stock baixo</MenuItem><MenuItem value="inactive">Inativos</MenuItem></TextField>

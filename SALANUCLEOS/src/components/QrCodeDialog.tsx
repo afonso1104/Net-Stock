@@ -4,17 +4,17 @@ import Print from '@mui/icons-material/Print'
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from '@mui/material'
 import { QRCodeSVG } from 'qrcode.react'
 import type { Box as InventoryBox } from '../models/inventory'
+import { boxUrl } from '../utils/boxUrl'
 import { useFeedback } from './FeedbackProvider'
 
 export function QrCodeDialog({ box, open, onClose }: { box: InventoryBox; open: boolean; onClose: () => void }) {
   const { notify } = useFeedback()
-  const root = (import.meta.env.VITE_PUBLIC_APP_URL || window.location.href.split('#')[0]).replace(/\/?$/, '/')
-  const url = `${root}#/box/${box.id}`
+  const url = boxUrl(box.id)
   function download() {
     const svg = document.getElementById(`qr-${box.id}`)
     if (!svg) return
     const blob = new Blob([new XMLSerializer().serializeToString(svg)], { type: 'image/svg+xml' })
-    const anchor = document.createElement('a'); anchor.href = URL.createObjectURL(blob); anchor.download = `${box.code}-qr.svg`; anchor.click(); URL.revokeObjectURL(anchor.href)
+    const anchor = document.createElement('a'); anchor.href = URL.createObjectURL(blob); anchor.download = `${box.code}-qr.svg`; anchor.click(); setTimeout(() => URL.revokeObjectURL(anchor.href), 1000)
   }
   return <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" className="qr-print"><DialogTitle className="no-print">QR Code da caixa</DialogTitle><DialogContent>
     <Stack alignItems="center" spacing={2.5} sx={{ py: 3 }}>

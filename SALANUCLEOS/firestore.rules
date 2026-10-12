@@ -1,15 +1,34 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Acesso: contas Google listadas em allowedUsers/{email em minúsculas}.
+    function signedEmail() {
+      return request.auth.token.email.lower();
+    }
+    function member() {
+      return /databases/$(database)/documents/allowedUsers/$(signedEmail());
+    }
     function isTeam() {
-      return request.auth != null && request.auth.uid == "REPLACE_WITH_SHARED_ACCOUNT_UID";
+      return request.auth != null && request.auth.token.email_verified == true && exists(member());
+    }
+    function isAdmin() {
+      return isTeam() && get(member()).data.admin == true;
     }
     function validAudit(data) {
       return data.person is string && data.person.size() > 0
+        && data.userEmail == signedEmail()
         && data.quantity is int && data.quantity > 0
         && data.materialId is string;
     }
 
+    match /allowedUsers/{email} {
+      // Cada pessoa pode confirmar o seu próprio acesso; a equipa vê a lista; só admins a alteram.
+      allow get: if request.auth != null && email == signedEmail();
+      allow list: if isTeam();
+      allow create, update: if isAdmin() && email == email.lower()
+        && request.resource.data.admin is bool && request.resource.data.name is string;
+      allow delete: if isAdmin() && email != signedEmail();
+    }
     match /materials/{id} {
       allow read: if isTeam();
       allow create: if isTeam() && request.resource.data.name is string
@@ -49,9 +68,11 @@ service cloud.firestore {
         && request.resource.data.initialQuantity > 0
         && request.resource.data.pendingQuantity == request.resource.data.initialQuantity
         && request.resource.data.status == "open"
-        && request.resource.data.person is string && request.resource.data.person.size() > 0;
+        && request.resource.data.person is string && request.resource.data.person.size() > 0
+        && request.resource.data.userEmail == signedEmail();
       allow update: if isTeam()
         && request.resource.data.materialId == resource.data.materialId
+        && request.resource.data.userEmail == resource.data.userEmail
         && request.resource.data.initialQuantity == resource.data.initialQuantity
         && request.resource.data.pendingQuantity is int
         && request.resource.data.pendingQuantity >= 0

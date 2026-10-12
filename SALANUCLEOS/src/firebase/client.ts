@@ -1,6 +1,6 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app'
 import { browserLocalPersistence, getAuth, setPersistence, type Auth } from 'firebase/auth'
-import { getFirestore, type Firestore } from 'firebase/firestore'
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, type Firestore } from 'firebase/firestore'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -11,7 +11,7 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
-export const isFirebaseConfigured = Object.values(firebaseConfig).every(Boolean) && Boolean(import.meta.env.VITE_SHARED_AUTH_EMAIL)
+export const isFirebaseConfigured = Object.values(firebaseConfig).every(Boolean)
 
 let auth: Auth | null = null
 let db: Firestore | null = null
@@ -20,7 +20,8 @@ if (isFirebaseConfigured) {
   const app: FirebaseApp = initializeApp(firebaseConfig)
   auth = getAuth(app)
   void setPersistence(auth, browserLocalPersistence)
-  db = getFirestore(app)
+  // Cache local: a app abre mais depressa e os dados já vistos ficam disponíveis sem Internet.
+  db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) })
 }
 
 export function requireAuth() {
@@ -32,5 +33,3 @@ export function requireDb() {
   if (!db) throw new Error('APP:O Firebase ainda não está configurado.')
   return db
 }
-
-export const sharedAuthEmail = import.meta.env.VITE_SHARED_AUTH_EMAIL || ''

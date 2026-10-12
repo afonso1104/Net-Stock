@@ -2,6 +2,8 @@ import type { Timestamp } from 'firebase/firestore'
 
 export type MovementType = 'stock_in' | 'checkout' | 'return' | 'transfer' | 'write_off_stock' | 'write_off_checkout' | 'correction'
 
+export const movementLabels: Record<MovementType, string> = { stock_in: 'Entrada', checkout: 'Retirada', return: 'Devolução', transfer: 'Transferência', write_off_stock: 'Baixa', write_off_checkout: 'Baixa em uso', correction: 'Correção' }
+
 export interface Material {
   id: string
   name: string
@@ -46,6 +48,7 @@ export interface Checkout {
   initialQuantity: number
   pendingQuantity: number
   person: string
+  userEmail: string
   reason: string
   note: string
   status: 'open' | 'closed'
@@ -67,6 +70,7 @@ export interface Movement {
   destinationBoxNameSnapshot: string | null
   checkoutId: string | null
   person: string
+  userEmail: string
   reason: string
   note: string
   sourceQuantityBefore: number | null
@@ -100,7 +104,16 @@ export interface ActionInput {
   destinationBoxId?: string
   checkoutId?: string
   person: string
+  userEmail: string
   reason: string
   note: string
   newQuantity?: number
+}
+
+export interface TeamMember {
+  id: string
+  name: string
+  admin: boolean
+  addedBy: string
+  createdAt: Timestamp | null
 }

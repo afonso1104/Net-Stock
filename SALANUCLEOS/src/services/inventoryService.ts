@@ -77,6 +77,7 @@ function movementBase(type: MovementType, input: ActionInput, material: Material
     destinationBoxNameSnapshot: null,
     checkoutId: input.checkoutId ?? null,
     person: input.person.trim(),
+    userEmail: input.userEmail,
     reason: input.reason.trim(),
     note: input.note.trim(),
     sourceQuantityBefore: null,
@@ -128,7 +129,7 @@ export async function checkoutStock(input: ActionInput) {
     tx.set(stockRef, { materialId: material.id, boxId: box.id, quantity: after, updatedAt: serverTimestamp(), lastOperationId: operationRef.id })
     tx.set(checkoutRef, {
       materialId: material.id, materialNameSnapshot: material.name, sourceBoxId: box.id, sourceBoxNameSnapshot: box.name,
-      initialQuantity: input.quantity, pendingQuantity: input.quantity, person: input.person.trim(), reason: input.reason.trim(), note: input.note.trim(),
+      initialQuantity: input.quantity, pendingQuantity: input.quantity, person: input.person.trim(), userEmail: input.userEmail, reason: input.reason.trim(), note: input.note.trim(),
       status: 'open', createdAt: serverTimestamp(), closedAt: null, lastOperationId: operationRef.id,
     })
     tx.set(operationRef, { ...movementBase('checkout', input, material), sourceBoxNameSnapshot: box.name, sourceQuantityBefore: before, sourceQuantityAfter: after, checkoutId: checkoutRef.id })
